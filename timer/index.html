@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus & Pray</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Neobrutalism Custom Styles & Animations */
+        :root {
+            --bg-color: #fef08a; /* Bright yellow default */
+            --text-color: #000000;
+            --card-bg: #ffffff;
+        }
+
+        body.dark-mode {
+            --bg-color: #1f2937; /* Dark charcoal */
+            --text-color: #a3e635; /* Neon green */
+            --card-bg: #111827;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease;
+        }
+
+        .neo-card {
+            background-color: var(--card-bg);
+            border: 4px solid var(--text-color);
+            box-shadow: 8px 8px 0px 0px var(--text-color);
+            color: var(--text-color);
+        }
+
+        .neo-btn {
+            background-color: var(--card-bg);
+            border: 3px solid var(--text-color);
+            box-shadow: 4px 4px 0px 0px var(--text-color);
+            transition: all 0.1s ease-in-out;
+            font-weight: bold;
+        }
+
+        .neo-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px 0px var(--text-color);
+        }
+
+        /* Soft Pulse Effect (Safer than strobe) */
+        @keyframes softPulse {
+            0%, 100% { filter: invert(0%); }
+            50% { filter: invert(100%) hue-rotate(90deg); }
+        }
+
+        .soft-pulse-active {
+            animation: softPulse 2s ease-in-out 2; /* Pulses twice over 4 seconds */
+        }
+        
+        /* Modal hidden state */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="p-4 md:p-8 font-sans min-h-screen">
+
+    <header class="flex justify-between items-center mb-8">
+        <h1 class="text-4xl font-black uppercase tracking-tighter border-b-4 border-current">Focus & Pray</h1>
+        <button id="btn-settings" class="neo-btn p-3 text-2xl" title="Settings">⚙️</button>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-12 gap-8">
+        
+        <div class="md:col-span-7 flex flex-col gap-6">
+            
+            <div class="neo-card p-6 md:p-12 text-center relative">
+                <div class="flex justify-between text-sm md:text-lg font-bold mb-4 uppercase">
+                    <span id="loop-display" class="border-2 border-current px-2 py-1">Loop: 0 / ∞</span>
+                    <span id="stopwatch-display" class="border-2 border-current px-2 py-1">Total: 00:00:00</span>
+                </div>
+                <div id="timer-display" class="text-7xl md:text-9xl font-black tracking-widest my-8">25:00</div>
+                
+                <div class="flex justify-center gap-4 mt-8">
+                    <button id="btn-start" class="neo-btn px-6 py-3 text-xl bg-green-400">Start</button>
+                    <button id="btn-pause" class="neo-btn px-6 py-3 text-xl bg-yellow-400">Pause</button>
+                    <button id="btn-reset" class="neo-btn px-6 py-3 text-xl bg-red-400">Reset</button>
+                </div>
+            </div>
+
+            <div class="neo-card p-6">
+                <h2 class="text-2xl font-black mb-4">Set Timer</h2>
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button class="neo-btn py-2 preset-btn" data-time="5">5 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="10">10 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="15">15 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="20">20 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="25">25 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="30">30 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="40">40 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="45">45 Min</button>
+                    <button class="neo-btn py-2 preset-btn" data-time="50">50 Min</button>
+                </div>
+                <div class="flex items-center gap-4">
+                    <label class="font-bold text-lg">Loops:</label>
+                    <select id="loop-select" class="neo-btn p-2 text-lg cursor-pointer">
+                        <option value="0">No Loop</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="infinite" selected>Forever (∞)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-5">
+            <div class="neo-card p-6 h-full flex flex-col">
+                <div class="text-center bg-current text-[var(--bg-color)] p-4 mb-6 border-4 border-current">
+                    <h2 class="text-xl font-bold uppercase">Next Prayer</h2>
+                    <div id="next-prayer-name" class="text-3xl font-black mt-2">Loading...</div>
+                    <div id="next-prayer-countdown" class="text-2xl font-bold mt-2">--:--:--</div>
+                </div>
+
+                <div class="flex-grow">
+                    <table class="w-full text-lg font-bold text-left border-collapse">
+                        <tbody>
+                            <tr class="border-b-2 border-current"><td class="py-3">Fajr</td><td class="py-3 text-right" id="time-Fajr">--:--</td></tr>
+                            <tr class="border-b-2 border-current"><td class="py-3">Sunrise</td><td class="py-3 text-right" id="time-Sunrise">--:--</td></tr>
+                            <tr class="border-b-2 border-current"><td class="py-3">Dhuhr</td><td class="py-3 text-right" id="time-Dhuhr">--:--</td></tr>
+                            <tr class="border-b-2 border-current"><td class="py-3">Asr</td><td class="py-3 text-right" id="time-Asr">--:--</td></tr>
+                            <tr class="border-b-2 border-current"><td class="py-3">Maghrib</td><td class="py-3 text-right" id="time-Maghrib">--:--</td></tr>
+                            <tr><td class="py-3">Isha</td><td class="py-3 text-right" id="time-Isha">--:--</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6 pt-4 border-t-4 border-current text-sm font-bold flex justify-between items-center">
+                    <span>📍 <span id="location-display">Detecting...</span></span>
+                    <button id="btn-refresh-location" class="neo-btn px-2 py-1 text-xs">🔄 Refresh</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+        <div class="neo-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto relative">
+            <button id="btn-close-settings" class="neo-btn absolute top-4 right-4 px-3 py-1 bg-red-400">X</button>
+            <h2 class="text-3xl font-black uppercase mb-6 border-b-4 border-current pb-2">Settings</h2>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-bold bg-current text-[var(--bg-color)] p-2 mb-3">🎨 Visuals</h3>
+                <label class="flex items-center gap-3 mb-2 cursor-pointer font-bold">
+                    <input type="checkbox" id="toggle-night" class="w-6 h-6 border-2 border-current rounded-none">
+                    Night Mode (🌙)
+                </label>
+                <label class="flex items-center gap-3 cursor-pointer font-bold">
+                    <input type="checkbox" id="toggle-pulse" class="w-6 h-6 border-2 border-current rounded-none" checked>
+                    Soft Pulse Alerts (🚨)
+                </label>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-xl font-bold bg-current text-[var(--bg-color)] p-2 mb-3">🔊 Audio</h3>
+                <label class="flex items-center gap-3 mb-2 cursor-pointer font-bold">
+                    <input type="checkbox" id="toggle-voice" class="w-6 h-6 border-2 border-current rounded-none" checked>
+                    Voice Assistant (🗣️)
+                </label>
+                <label class="flex items-center gap-3 mb-4 cursor-pointer font-bold">
+                    <input type="checkbox" id="toggle-chime" class="w-6 h-6 border-2 border-current rounded-none" checked>
+                    Pre-Prayer Voice Alerts (🔔)
+                </label>
+                <div class="mb-2">
+                    <label class="font-bold block mb-1">Rest Message:</label>
+                    <input type="text" id="input-rest-msg" class="w-full neo-btn p-2 font-normal" value="Great job! Take a rest and drink some water.">
+                </div>
+                <div>
+                    <label class="font-bold block mb-1">Volume:</label>
+                    <input type="range" id="input-volume" min="10" max="100" value="100" class="w-full">
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xl font-bold bg-current text-[var(--bg-color)] p-2 mb-3">🕋 Prayer Rules</h3>
+                <label class="font-bold block mb-1">Calculation Method:</label>
+                <select id="select-method" class="w-full neo-btn p-2 cursor-pointer">
+                    <option value="20">MUI / Kemenag Indonesia</option>
+                    <option value="4">Umm al-Qura (Makkah)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Variables & State ---
+        let mainTimerInterval;
+        let stopwatchInterval;
+        let prayerInterval;
+        
+        let timerTimeLeft = 25 * 60; // default 25 mins in seconds
+        let currentTimerDuration = 25 * 60; // remembers what to reset to
+        let stopwatchTime = 0;
+        let currentLoop = 0;
+        let isTimerRunning = false;
+        
+        let prayerData = {};
+        
+        // --- 2. Element Selectors ---
+        const uiTimer = document.getElementById('timer-display');
+        const uiStopwatch = document.getElementById('stopwatch-display');
+        const uiLoop = document.getElementById('loop-display');
+        const loopSelect = document.getElementById('loop-select');
+        
+        // --- 3. Core Timer Logic ---
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimerUI() {
+            uiTimer.textContent = formatTime(timerTimeLeft);
+        }
+
+        function updateStopwatchUI() {
+            uiStopwatch.textContent = `Total: ${formatTime(stopwatchTime)}`;
+        }
+
+        function startTimer() {
+            if (isTimerRunning) return;
+            isTimerRunning = true;
+            
+            mainTimerInterval = setInterval(() => {
+                if (timerTimeLeft > 0) {
+                    timerTimeLeft--;
+                    updateTimerUI();
+                } else {
+                    handleLoopFinish();
+                }
+            }, 1000);
+
+            stopwatchInterval = setInterval(() => {
+                stopwatchTime++;
+                updateStopwatchUI();
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            clearInterval(mainTimerInterval);
+            clearInterval(stopwatchInterval);
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timerTimeLeft = currentTimerDuration;
+            stopwatchTime = 0;
+            currentLoop = 0;
+            updateTimerUI();
+            updateStopwatchUI();
+            updateLoopUI();
+        }
+
+        function handleLoopFinish() {
+            pauseTimer();
+            currentLoop++;
+            
+            const maxLoops = loopSelect.value;
+            const msg = document.getElementById('input-rest-msg').value;
+            triggerAlert(`Loop ${currentLoop} finished. ${msg}`);
+
+            updateLoopUI();
+
+            // Check if we continue looping
+            if (maxLoops === 'infinite' || currentLoop < parseInt(maxLoops)) {
+                timerTimeLeft = currentTimerDuration;
+                updateTimerUI();
+                setTimeout(startTimer, 2000); // Wait 2s before auto-starting next loop
+            }
+        }
+
+        function updateLoopUI() {
+            const max = loopSelect.value === 'infinite' ? '∞' : loopSelect.value;
+            uiLoop.textContent = `Loop: ${currentLoop} / ${max}`;
+        }
+
+        // Preset Buttons Event Listeners
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mins = parseInt(e.target.getAttribute('data-time'));
+                currentTimerDuration = mins * 60;
+                timerTimeLeft = currentTimerDuration;
+                updateTimerUI();
+            });
+        });
+
+        document.getElementById('btn-start').addEventListener('click', startTimer);
+        document.getElementById('btn-pause').addEventListener('click', pauseTimer);
+        document.getElementById('btn-reset').addEventListener('click', resetTimer);
+        loopSelect.addEventListener('change', updateLoopUI);
+
+        // --- 4. Alert & Voice Logic ---
+        function triggerAlert(text) {
+            // Screen Pulse
+            if (document.getElementById('toggle-pulse').checked) {
+                document.body.classList.add('soft-pulse-active');
+                setTimeout(() => document.body.classList.remove('soft-pulse-active'), 4000);
+            }
+
+            // Voice
+            if (document.getElementById('toggle-voice').checked && 'speechSynthesis' in window) {
+                const volume = document.getElementById('input-volume').value / 100;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.volume = volume;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- 5. Prayer Time Logic ---
+        async function fetchPrayerTimes(lat, lon, method) {
+            try {
+                const today = new Date();
+                const timestamp = Math.floor(today.getTime() / 1000);
+                const url = `https://api.aladhan.com/v1/timings/${timestamp}?latitude=${lat}&longitude=${lon}&method=${method}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                prayerData = data.data.timings;
+                
+                // Update UI Table
+                const prayersToShow = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+                prayersToShow.forEach(p => {
+                    document.getElementById(`time-${p}`).textContent = prayerData[p];
+                });
+
+                startPrayerCountdown();
+            } catch (error) {
+                console.error("Error fetching prayer times", error);
+                document.getElementById('next-prayer-name').textContent = "API Error";
+            }
+        }
+
+        function startPrayerCountdown() {
+            if (prayerInterval) clearInterval(prayerInterval);
+
+            prayerInterval = setInterval(() => {
+                const now = new Date();
+                let nextPrayerName = "";
+                let nextPrayerDate = null;
+
+                const prayers = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+                
+                for (let p of prayers) {
+                    const [hours, mins] = prayerData[p].split(':');
+                    const pDate = new Date();
+                    pDate.setHours(parseInt(hours), parseInt(mins), 0, 0);
+
+                    if (pDate > now) {
+                        nextPrayerName = p;
+                        nextPrayerDate = pDate;
+                        break;
+                    }
+                }
+
+                // If all prayers today are done, look at tomorrow's Fajr (simplified by adding 1 day)
+                if (!nextPrayerDate) {
+                    nextPrayerName = 'Fajr (Tomorrow)';
+                    const [hours, mins] = prayerData['Fajr'].split(':');
+                    nextPrayerDate = new Date();
+                    nextPrayerDate.setDate(nextPrayerDate.getDate() + 1);
+                    nextPrayerDate.setHours(parseInt(hours), parseInt(mins), 0, 0);
+                }
+
+                const diffSeconds = Math.floor((nextPrayerDate - now) / 1000);
+                
+                document.getElementById('next-prayer-name').textContent = nextPrayerName;
+                document.getElementById('next-prayer-countdown').textContent = formatTime(diffSeconds);
+
+                // Alerts for 10 min and 5 min
+                if (document.getElementById('toggle-chime').checked) {
+                    if (diffSeconds === 600) triggerAlert(`Ten minutes until ${nextPrayerName} prayer.`);
+                    if (diffSeconds === 300) triggerAlert(`Five minutes until ${nextPrayerName} prayer.`);
+                }
+
+            }, 1000);
+        }
+
+        function getLocationAndPrayers() {
+            const method = document.getElementById('select-method').value;
+            const locDisplay = document.getElementById('location-display');
+            locDisplay.textContent = "Detecting...";
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        locDisplay.textContent = "Location Found ✓";
+                        fetchPrayerTimes(position.coords.latitude, position.coords.longitude, method);
+                    },
+                    (error) => {
+                        // Fallback to a default location (e.g., Bekasi, West Java as discussed)
+                        locDisplay.textContent = "Using Default (Bekasi) 📍";
+                        fetchPrayerTimes(-6.2383, 106.9756, method); 
+                    }
+                );
+            } else {
+                locDisplay.textContent = "Geolocation unsupported.";
+            }
+        }
+
+        document.getElementById('btn-refresh-location').addEventListener('click', getLocationAndPrayers);
+        document.getElementById('select-method').addEventListener('change', getLocationAndPrayers);
+
+        // --- 6. Settings Modal & Dark Mode Logic ---
+        const modal = document.getElementById('settings-modal');
+        document.getElementById('btn-settings').addEventListener('click', () => modal.classList.remove('hidden'));
+        document.getElementById('btn-close-settings').addEventListener('click', () => modal.classList.add('hidden'));
+
+        document.getElementById('toggle-night').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        });
+
+        // Initialize on load
+        updateTimerUI();
+        getLocationAndPrayers();
+
+    </script>
+</body>
+</html>
