@@ -382,7 +382,10 @@
                 startPrayerCountdown();
             } catch (error) {
                 console.error("Error fetching prayer times", error);
-                document.getElementById('next-prayer-name').textContent = "API Error";
+                // Update UI to show the network drop
+                document.getElementById('next-prayer-name').textContent = "Network Error 🔌";
+                document.getElementById('next-prayer-countdown').textContent = "Check Connection";
+                document.getElementById('location-display').textContent = "Fetch Failed";
             }
         }
 
@@ -441,6 +444,19 @@
             }, 1000);
         }
 
+        // NEW: Function to translate coordinates into a real city name
+        async function getCityName(lat, lon) {
+            try {
+                // We ask the free BigDataCloud API to read the coordinates
+                const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                const data = await response.json();
+                // It will try to find the city, or the general locality if the city is hidden
+                return data.city || data.locality || "Unknown Location";
+            } catch (error) {
+                return "Location Found ✓"; // Fallback if the map database fails
+            }
+        }
+
         function getLocationAndPrayers() {
             const method = document.getElementById('select-method').value;
             const locDisplay = document.getElementById('location-display');
@@ -448,9 +464,15 @@
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        locDisplay.textContent = "Location Found ✓";
-                        fetchPrayerTimes(position.coords.latitude, position.coords.longitude, method);
+                    async (position) => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        // Wait for the map database to find your city name
+                        const cityName = await getCityName(lat, lon);
+                        locDisplay.textContent = `📍 ${cityName}`; // Display the real city!
+                        
+                        fetchPrayerTimes(lat, lon, method);
                     },
                     (error) => {
                         locDisplay.textContent = "Using Default (Bekasi) 📍";
