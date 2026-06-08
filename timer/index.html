@@ -13,10 +13,11 @@
             --card-bg: #ffffff;
         }
 
+        /* UPDATED: High Contrast Night Mode */
         body.dark-mode {
-            --bg-color: #1f2937; /* Dark charcoal */
-            --text-color: #a3e635; /* Neon green */
-            --card-bg: #111827;
+            --bg-color: #000000; /* Pure Black */
+            --text-color: #39ff14; /* Electric Neon Green */
+            --card-bg: #111111; /* Very Dark Grey */
         }
 
         body {
@@ -80,12 +81,12 @@
                     <span id="stopwatch-display" class="border-2 border-current px-2 py-1">Total: 00:00:00</span>
                 </div>
                 
-                <input type="text" id="timer-display" class="w-full text-center text-7xl md:text-9xl font-black tracking-widest my-8 bg-transparent border-b-8 border-transparent focus:border-current outline-none transition-colors" value="25:00" title="Click to type a custom time (e.g. 50:00)">
+                <input type="text" id="timer-display" class="w-full text-center text-7xl md:text-9xl font-black tracking-widest my-8 bg-transparent border-b-8 border-transparent focus:border-current outline-none transition-colors" value="00:25:00" title="Type time as hh:mm:ss">
                 
                 <div class="flex justify-center gap-4 mt-8">
-                    <button id="btn-start" class="neo-btn px-6 py-3 text-xl bg-green-400">Start</button>
-                    <button id="btn-pause" class="neo-btn px-6 py-3 text-xl bg-yellow-400">Pause</button>
-                    <button id="btn-reset" class="neo-btn px-6 py-3 text-xl bg-red-400">Reset</button>
+                    <button id="btn-start" class="neo-btn px-6 py-3 text-xl bg-green-400 text-black">Start</button>
+                    <button id="btn-pause" class="neo-btn px-6 py-3 text-xl bg-yellow-400 text-black">Pause</button>
+                    <button id="btn-reset" class="neo-btn px-6 py-3 text-xl bg-red-400 text-black">Reset</button>
                 </div>
             </div>
 
@@ -104,13 +105,13 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <label class="font-bold text-lg">Loops:</label>
-                    <select id="loop-select" class="neo-btn p-2 text-lg cursor-pointer">
-                        <option value="0">No Loop</option>
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="infinite" selected>Forever (∞)</option>
+                    <select id="loop-select" class="neo-btn p-2 text-lg cursor-pointer bg-transparent">
+                        <option value="0" class="text-black">No Loop</option>
+                        <option value="1" class="text-black">1</option>
+                        <option value="2" class="text-black">2</option>
+                        <option value="3" class="text-black">3</option>
+                        <option value="4" class="text-black">4</option>
+                        <option value="infinite" class="text-black" selected>Forever (∞)</option>
                     </select>
                 </div>
             </div>
@@ -146,9 +147,11 @@
         </div>
     </main>
 
+    <div id="yt-player-container" class="hidden"></div>
+
     <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
         <div class="neo-card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto relative">
-            <button id="btn-close-settings" class="neo-btn absolute top-4 right-4 px-3 py-1 bg-red-400">X</button>
+            <button id="btn-close-settings" class="neo-btn absolute top-4 right-4 px-3 py-1 bg-red-400 text-black">X</button>
             <h2 class="text-3xl font-black uppercase mb-6 border-b-4 border-current pb-2">Settings</h2>
 
             <div class="mb-6">
@@ -171,11 +174,11 @@
                 </label>
                 <label class="flex items-center gap-3 mb-4 cursor-pointer font-bold">
                     <input type="checkbox" id="toggle-chime" class="w-6 h-6 border-2 border-current rounded-none" checked>
-                    Pre-Prayer Voice Alerts (🔔)
+                    Pre-Prayer Voice & Video Alerts (🔔)
                 </label>
                 <div class="mb-2">
                     <label class="font-bold block mb-1">Rest Message:</label>
-                    <input type="text" id="input-rest-msg" class="w-full neo-btn p-2 font-normal" value="Great job! Take a rest and drink some water.">
+                    <input type="text" id="input-rest-msg" class="w-full neo-btn p-2 font-normal text-black" value="Great job! Take a rest and drink some water.">
                 </div>
                 <div>
                     <label class="font-bold block mb-1">Volume:</label>
@@ -186,7 +189,7 @@
             <div>
                 <h3 class="text-xl font-bold bg-black text-white p-2 mb-3">🕋 Prayer Rules</h3>
                 <label class="font-bold block mb-1">Calculation Method:</label>
-                <select id="select-method" class="w-full neo-btn p-2 cursor-pointer">
+                <select id="select-method" class="w-full neo-btn p-2 cursor-pointer bg-white text-black">
                     <option value="20">MUI / Kemenag Indonesia</option>
                     <option value="4">Umm al-Qura (Makkah)</option>
                 </select>
@@ -201,7 +204,7 @@
         let prayerInterval;
         
         let timerTimeLeft = 25 * 60; // default 25 mins in seconds
-        let currentTimerDuration = 25 * 60; // remembers what to reset to
+        let currentTimerDuration = 25 * 60; 
         let stopwatchTime = 0;
         let currentLoop = 0;
         let isTimerRunning = false;
@@ -215,16 +218,17 @@
         const loopSelect = document.getElementById('loop-select');
         
         // --- Core Timer Logic ---
+        
+        // UPDATED: Now strictly formats to hh:mm:ss
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
             const s = seconds % 60;
-            if (h > 0) return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
         function updateTimerUI() {
-            uiTimer.value = formatTime(timerTimeLeft); // Update the input value
+            uiTimer.value = formatTime(timerTimeLeft); 
         }
 
         function updateStopwatchUI() {
@@ -237,11 +241,15 @@
             let parts = val.split(':');
             let secs = 0;
             
-            // If user types "50:00"
-            if (parts.length === 2) {
+            // If user types "01:30:00" (hh:mm:ss)
+            if (parts.length === 3) {
+                secs = (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0);
+            }
+            // If user types "50:00" (mm:ss)
+            else if (parts.length === 2) {
                 secs = (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
             } 
-            // If user just types "50"
+            // If user just types "50" (assume minutes)
             else if (parts.length === 1) {
                 secs = (parseInt(parts[0]) || 0) * 60;
             }
@@ -251,13 +259,13 @@
                 timerTimeLeft = secs;
             } 
             
-            updateTimerUI(); // Refresh display
+            updateTimerUI(); // Strictly forces it back to hh:mm:ss
         });
 
         function startTimer() {
             if (isTimerRunning) return;
             isTimerRunning = true;
-            uiTimer.disabled = true; // Lock the input while running
+            uiTimer.disabled = true; 
             
             mainTimerInterval = setInterval(() => {
                 if (timerTimeLeft > 0) {
@@ -276,7 +284,7 @@
 
         function pauseTimer() {
             isTimerRunning = false;
-            uiTimer.disabled = false; // Unlock input when paused
+            uiTimer.disabled = false; 
             clearInterval(mainTimerInterval);
             clearInterval(stopwatchInterval);
         }
@@ -301,7 +309,6 @@
 
             updateLoopUI();
 
-            // Check if we continue looping
             if (maxLoops === 'infinite' || currentLoop < parseInt(maxLoops)) {
                 timerTimeLeft = currentTimerDuration;
                 updateTimerUI();
@@ -314,7 +321,6 @@
             uiLoop.textContent = `Loop: ${currentLoop} / ${max}`;
         }
 
-        // Preset Buttons Event Listeners
         document.querySelectorAll('.preset-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const mins = parseInt(e.target.getAttribute('data-time'));
@@ -329,21 +335,31 @@
         document.getElementById('btn-reset').addEventListener('click', resetTimer);
         loopSelect.addEventListener('change', updateLoopUI);
 
-        // --- Alert & Voice Logic ---
+        // --- Alert & YouTube Logic ---
         function triggerAlert(text) {
-            // Screen Pulse
             if (document.getElementById('toggle-pulse').checked) {
                 document.body.classList.add('soft-pulse-active');
                 setTimeout(() => document.body.classList.remove('soft-pulse-active'), 4000);
             }
 
-            // Voice
             if (document.getElementById('toggle-voice').checked && 'speechSynthesis' in window) {
                 const volume = document.getElementById('input-volume').value / 100;
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.volume = volume;
                 window.speechSynthesis.speak(utterance);
             }
+        }
+
+        // NEW: YouTube Audio Injection
+        function playYouTubeAlert() {
+            const container = document.getElementById('yt-player-container');
+            // Injects iframe with autoplay enabled
+            container.innerHTML = '<iframe width="1" height="1" src="https://www.youtube.com/embed/AePk2QNhTV0?autoplay=1" allow="autoplay" frameborder="0"></iframe>';
+            
+            // Removes the iframe after 2 minutes (120,000 ms) so it doesn't linger invisibly
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 120000);
         }
 
         // --- Prayer Time Logic ---
@@ -358,7 +374,6 @@
                 
                 prayerData = data.data.timings;
                 
-                // Update UI Table
                 const prayersToShow = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
                 prayersToShow.forEach(p => {
                     document.getElementById(`time-${p}`).textContent = prayerData[p];
@@ -404,11 +419,23 @@
                 const diffSeconds = Math.floor((nextPrayerDate - now) / 1000);
                 
                 document.getElementById('next-prayer-name').textContent = nextPrayerName;
-                document.getElementById('next-prayer-countdown').textContent = formatTime(diffSeconds);
+                
+                // Show prayer countdown strictly as hh:mm:ss
+                const ph = Math.floor(diffSeconds / 3600);
+                const pm = Math.floor((diffSeconds % 3600) / 60);
+                const ps = diffSeconds % 60;
+                document.getElementById('next-prayer-countdown').textContent = `${ph.toString().padStart(2, '0')}:${pm.toString().padStart(2, '0')}:${ps.toString().padStart(2, '0')}`;
 
+                // Alerts for 10 min and 5 min
                 if (document.getElementById('toggle-chime').checked) {
-                    if (diffSeconds === 600) triggerAlert(`Ten minutes until ${nextPrayerName} prayer.`);
-                    if (diffSeconds === 300) triggerAlert(`Five minutes until ${nextPrayerName} prayer.`);
+                    if (diffSeconds === 600) {
+                        triggerAlert(`Ten minutes until ${nextPrayerName} prayer.`);
+                        playYouTubeAlert(); // Triggers the video
+                    }
+                    if (diffSeconds === 300) {
+                        triggerAlert(`Five minutes until ${nextPrayerName} prayer.`);
+                        playYouTubeAlert(); // Triggers the video again
+                    }
                 }
 
             }, 1000);
@@ -426,7 +453,6 @@
                         fetchPrayerTimes(position.coords.latitude, position.coords.longitude, method);
                     },
                     (error) => {
-                        // Fallback to Bekasi, West Java if permission is denied
                         locDisplay.textContent = "Using Default (Bekasi) 📍";
                         fetchPrayerTimes(-6.2383, 106.9756, method); 
                     }
