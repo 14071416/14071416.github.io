@@ -198,28 +198,28 @@
     </div>
 
     <script>
-        // --- Variables & State ---
+        // --- Core Variables ---
         let mainTimerInterval;
         let stopwatchInterval;
         let prayerInterval;
         
-        let timerTimeLeft = 25 * 60; // default 25 mins in seconds
+        let timerTimeLeft = 25 * 60; 
         let currentTimerDuration = 25 * 60; 
-        let stopwatchTime = 0;
+        
+        // UPDATED STOPWATCH VARIABLES
+        let stopwatchTime = 0; // What displays on screen
+        let accumulatedStopwatchTime = 0; // Remembers past loops/pauses
+        let stopwatchStartTime = 0; // Timestamp when Start is clicked
+        
         let currentLoop = 0;
         let isTimerRunning = false;
-        
         let prayerData = {};
         
-        // --- Element Selectors ---
         const uiTimer = document.getElementById('timer-display');
         const uiStopwatch = document.getElementById('stopwatch-display');
         const uiLoop = document.getElementById('loop-display');
         const loopSelect = document.getElementById('loop-select');
         
-        // --- Core Timer Logic ---
-        
-        // UPDATED: Now strictly formats to hh:mm:ss
         function formatTime(seconds) {
             const h = Math.floor(seconds / 3600);
             const m = Math.floor((seconds % 3600) / 60);
@@ -235,22 +235,16 @@
             uiStopwatch.textContent = `Total: ${formatTime(stopwatchTime)}`;
         }
 
-        // --- Custom User Input Logic ---
         uiTimer.addEventListener('change', (e) => {
             const val = e.target.value.trim();
             let parts = val.split(':');
             let secs = 0;
             
-            // If user types "01:30:00" (hh:mm:ss)
             if (parts.length === 3) {
                 secs = (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0);
-            }
-            // If user types "50:00" (mm:ss)
-            else if (parts.length === 2) {
+            } else if (parts.length === 2) {
                 secs = (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
-            } 
-            // If user just types "50" (assume minutes)
-            else if (parts.length === 1) {
+            } else if (parts.length === 1) {
                 secs = (parseInt(parts[0]) || 0) * 60;
             }
 
@@ -258,25 +252,24 @@
                 currentTimerDuration = secs;
                 timerTimeLeft = secs;
             } 
-            
-            updateTimerUI(); // Strictly forces it back to hh:mm:ss
+            updateTimerUI(); 
         });
 
-        let targetEndTime = 0; // New variable to track the real-world finish time
+        let targetEndTime = 0;
 
         function startTimer() {
             if (isTimerRunning) return;
             isTimerRunning = true;
             uiTimer.disabled = true; 
             
-            // Calculate the exact real-world time this loop should end
-            targetEndTime = Date.now() + (timerTimeLeft * 1000);
+            // Mark the exact timestamps for both the timer AND the stopwatch
+            const now = Date.now();
+            targetEndTime = now + (timerTimeLeft * 1000);
+            stopwatchStartTime = now;
             
             mainTimerInterval = setInterval(() => {
-                // Check the real current time
-                const now = Date.now();
-                // Calculate the true remaining seconds
-                const remainingSeconds = Math.round((targetEndTime - now) / 1000);
+                const checkNow = Date.now();
+                const remainingSeconds = Math.round((targetEndTime - checkNow) / 1000);
 
                 if (remainingSeconds >= 0) {
                     timerTimeLeft = remainingSeconds;
@@ -284,25 +277,40 @@
                 } else {
                     handleLoopFinish();
                 }
-            }, 1000); // The browser might pause this interval, but the math will instantly catch up when reopened!
+            }, 1000);
 
+            // UPDATED TIMESTAMP STOPWATCH LOGIC
             stopwatchInterval = setInterval(() => {
-                stopwatchTime++;
+                const checkNow = Date.now();
+                // Calculate real seconds passed since pressing 'Start'
+                const currentSessionSeconds = Math.round((checkNow - stopwatchStartTime) / 1000);
+                // Add it to any time we already saved from previous loops
+                stopwatchTime = accumulatedStopwatchTime + currentSessionSeconds;
                 updateStopwatchUI();
             }, 1000);
         }
 
         function pauseTimer() {
+            if (!isTimerRunning) return; // Prevent double-pausing errors
             isTimerRunning = false;
             uiTimer.disabled = false; 
             clearInterval(mainTimerInterval);
             clearInterval(stopwatchInterval);
+            
+            // Save the exact elapsed time so the stopwatch can resume later
+            const currentSessionSeconds = Math.round((Date.now() - stopwatchStartTime) / 1000);
+            accumulatedStopwatchTime += currentSessionSeconds;
         }
 
         function resetTimer() {
             pauseTimer();
             timerTimeLeft = currentTimerDuration;
+            
+            // Wipe the stopwatch memory clean
             stopwatchTime = 0;
+            accumulatedStopwatchTime = 0;
+            stopwatchStartTime = 0;
+            
             currentLoop = 0;
             updateTimerUI();
             updateStopwatchUI();
