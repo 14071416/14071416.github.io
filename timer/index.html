@@ -262,19 +262,29 @@
             updateTimerUI(); // Strictly forces it back to hh:mm:ss
         });
 
+        let targetEndTime = 0; // New variable to track the real-world finish time
+
         function startTimer() {
             if (isTimerRunning) return;
             isTimerRunning = true;
             uiTimer.disabled = true; 
             
+            // Calculate the exact real-world time this loop should end
+            targetEndTime = Date.now() + (timerTimeLeft * 1000);
+            
             mainTimerInterval = setInterval(() => {
-                if (timerTimeLeft > 0) {
-                    timerTimeLeft--;
+                // Check the real current time
+                const now = Date.now();
+                // Calculate the true remaining seconds
+                const remainingSeconds = Math.round((targetEndTime - now) / 1000);
+
+                if (remainingSeconds >= 0) {
+                    timerTimeLeft = remainingSeconds;
                     updateTimerUI();
                 } else {
                     handleLoopFinish();
                 }
-            }, 1000);
+            }, 1000); // The browser might pause this interval, but the math will instantly catch up when reopened!
 
             stopwatchInterval = setInterval(() => {
                 stopwatchTime++;
