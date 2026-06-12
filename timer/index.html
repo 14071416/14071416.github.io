@@ -457,6 +457,10 @@
                         triggerAlert(`Five minutes until ${nextPrayerName} prayer.`);
                         playYouTubeAlert(); // Triggers the video again
                     }
+                    if (diffSeconds === 0) {
+                        triggerAlert(`It is now time for ${nextPrayerName} prayer.`);
+                        playYouTubeAlert(); // Triggers the video one last time
+                    }
                 }
 
             }, 1000);
