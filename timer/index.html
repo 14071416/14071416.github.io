@@ -258,6 +258,10 @@
         let targetEndTime = 0;
 
         function startTimer() {
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+            
             if (isTimerRunning) return;
             isTimerRunning = true;
             uiTimer.disabled = true; 
@@ -355,16 +359,26 @@
 
         // --- Alert & YouTube Logic ---
         function triggerAlert(text) {
+            // 1. Screen Pulse
             if (document.getElementById('toggle-pulse').checked) {
                 document.body.classList.add('soft-pulse-active');
                 setTimeout(() => document.body.classList.remove('soft-pulse-active'), 4000);
             }
 
+            // 2. Voice (Might still get blocked in background, but tries anyway)
             if (document.getElementById('toggle-voice').checked && 'speechSynthesis' in window) {
                 const volume = document.getElementById('input-volume').value / 100;
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.volume = volume;
                 window.speechSynthesis.speak(utterance);
+            }
+
+            // 3. NEW: Native System Notification (Works even if minimized!)
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("Focus & Pray Alert", {
+                    body: text,
+                    icon: "https://cdn-icons-png.flaticon.com/512/2874/2874059.png" // A nice little clock/mosque icon
+                });
             }
         }
 
@@ -457,7 +471,7 @@
                         triggerAlert(`Five minutes until ${nextPrayerName} prayer.`);
                         playYouTubeAlert(); // Triggers the video again
                     }
-                    if (diffSeconds === 0) {
+                    if (diffSeconds <= 0 && diffSeconds > -3) {
                         triggerAlert(`It is now time for ${nextPrayerName} prayer.`);
                         playYouTubeAlert(); // Triggers the video one last time
                     }
